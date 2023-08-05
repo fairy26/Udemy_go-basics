@@ -1,7 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
 
-func main() { // アプリケーションのエントリポイント
-	fmt.Println("Hello World")
+	"github.com/joho/godotenv"
+)
+
+func main() {
+	godotenv.Load()
+	fmt.Println(os.Getenv("GO_ENV"))
 }
