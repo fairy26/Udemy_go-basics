@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"unsafe"
 )
 
 const secret = "abc" // read-only
@@ -60,4 +61,40 @@ func main() {
 
 	// 一括宣言
 	fmt.Println(ikkatsu_i, ikkatsu_s, ikkatsu_b)
+
+	var ui1 uint16
+	fmt.Printf("memory address of ui1: %p\n", &ui1) // &でポインタに
+	var ui2 uint16
+	fmt.Printf("memory address of ui2: %p\n", &ui2)
+	var p1 *uint16
+	fmt.Printf("value of p1: %v\n", p1) // nilで初期化されている
+	p1 = &ui1
+	fmt.Printf("value of p1: %v\n", p1)
+	fmt.Printf("size of p1: %d[bytes]\n", unsafe.Sizeof(p1)) // ポインタは8bytes
+	fmt.Printf("memory address of p1: %p\n", &p1)            // "ダブルポインタ", "ポインタのポインタ"
+	fmt.Printf("value of ui1(dereference): %v\n", *p1)
+	*p1 = 1
+	fmt.Printf("value of ui1: %v\n", ui1)
+
+	var pp1 **uint16 = &p1
+	fmt.Printf("value of pp1: %v\n", pp1)
+	fmt.Printf("size of pp1: %d[bytes]\n", unsafe.Sizeof(pp1))
+	fmt.Printf("memory address of pp1: %p\n", &pp1)
+	fmt.Printf("value of p1(dereference): %v\n", *pp1)
+	fmt.Printf("value of ui1(dereference): %v\n", **pp1)
+	**pp1 = 10
+	fmt.Printf("value of ui1: %v\n", ui1)
+
+	ok, result := true, "A"
+	fmt.Printf("memory address of result: %p\n", &result)
+	if ok {
+		// result := "B"   // 1: このスコープのみ (shadowing)
+		result = "B"    // 2
+		println(result) // 1: B, 2: B
+		fmt.Printf("memory address of result: %p\n", &result)
+	} else {
+		result := "C"
+		println(result)
+	}
+	println(result) // 1: A, 2: B
 }
