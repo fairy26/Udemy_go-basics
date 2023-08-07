@@ -1,65 +1,92 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"unsafe"
+	"os"
+	"strings"
 )
 
-type Task struct {
-	Title    string
-	Estimate int
+func funcDefer() {
+	// 複数のdifferは下から実行される
+	defer fmt.Println("main func final-finish")
+	defer fmt.Println("main func semi-finish")
+	fmt.Println("hello world")
+}
+
+func trimExtension(files ...string) []string { // ...string で可変長のsliceを扱える
+	out := make([]string, 0, len(files))
+	for _, f := range files {
+		out = append(out, strings.TrimSuffix(f, ".csv"))
+	}
+	return out
+}
+
+func fileChecker(name string) (string, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return "", errors.New("file not found")
+	}
+	defer f.Close()
+	return name, nil
+}
+
+func addExt(f func(file string) string, name string) {
+	fmt.Println(f(name))
+}
+
+func multiply() func(int) int {
+	return func(i int) int {
+		return i * 1000
+	}
+}
+
+func countUp() func(int) int {
+	count := 0 // global変数とは違い、値をこのスコープに閉じ込めることができる
+	return func(n int) int {
+		count += n
+		return count
+	}
 }
 
 func main() {
-	task1 := Task{
-		Title:    "Learning Golang",
-		Estimate: 3,
+	funcDefer()
+
+	files := []string{"file1.csv", "file2.csv", "file3.csv"}
+	fmt.Println(trimExtension(files...))
+
+	name, err := fileChecker("file.txt")
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
-	task1.Title = "Learning Go"
-	fmt.Printf("%[1]T, %+[1]v, %v\n", task1, task1.Title) // %vに+をつけると構造体のフィールド名も出力
-	// main.Task, {Title:Learning Go Estimate:3}, Learning Go
+	fmt.Println(name) // $ touch file.txt
 
-	var task2 Task = task1 // 実体は別のメモリ領域
-	task2.Title = "new"
-	fmt.Printf("task1: %v, task2: %v\n", task1.Title, task2.Title)
-	// task1: Learning Go, task2: new
+	// 無名関数
+	i := 1
+	func(i int) {
+		fmt.Println(i)
+	}(i) // 引数に与えると即座に実行してくれる
 
-	task1p := &Task{
-		Title:    "Learning concurrency",
-		Estimate: 2,
+	f1 := func(i int) int {
+		return i + 1
 	}
-	fmt.Printf("task1p: %T, %+v, %v\n", task1p, *task1p, unsafe.Sizeof(task1p))
-	// task1p: *main.Task, {Title:Learning concurrency Estimate:2}, 8
+	fmt.Println(f1(i))
 
-	// (*task1p).Title = "Changed"
-	task1p.Title = "Changed" // dereferenceの(*__)は省略できる！
-	fmt.Printf("task1p: %+v\n", *task1p)
-	// task1p: {Title:Changed Estimate:2}
+	// 無名関数を引数にもつ関数
+	f2 := func(name string) string {
+		return name + ".csv"
+	}
+	addExt(f2, "file1")
 
-	var task2p *Task = task1p
-	task2p.Title = "Changed by Task2"
-	fmt.Printf("task1: %+v\n", *task1p)
-	fmt.Printf("task2: %+v\n", *task2p)
-	// task1: {Title:Changed by Task2 Estimate:2}
-	// task2: {Title:Changed by Task2 Estimate:2} // pointerだから共有している
+	// 無名関数を返り値にもつ関数
+	f3 := multiply()
+	fmt.Println(f3(2))
 
-	task1.extendEstimate()
-	fmt.Printf("task1 value receiver: %+v\n", task1.Estimate)
-	// task1 value receiver: 3 // 元のtask1には影響を与えない
-
-	// (&task1).extendEstimatePointer() // pointerを取得する(&__)は省略できる！
-	(&task1).extendEstimatePointer()
-	fmt.Printf("task1 value receiver: %+v\n", task1.Estimate)
-	// task1 value receiver: 13
-
-}
-
-// reciever
-func (task Task) extendEstimate() {
-	// 受けとった構造体のコピーに対して操作を行う
-	task.Estimate += 10
-}
-
-func (task *Task) extendEstimatePointer() {
-	task.Estimate += 10 // dereference(*__)の省略形
+	// closure
+	f4 := countUp()
+	for i := 1; i <= 5; i++ {
+		v := f4(2)
+		fmt.Printf("%v\n", v)
+	}
 }
