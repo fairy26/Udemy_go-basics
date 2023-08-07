@@ -1,92 +1,101 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"os"
-	"strings"
+	"unsafe"
 )
 
-func funcDefer() {
-	// 複数のdifferは下から実行される
-	defer fmt.Println("main func final-finish")
-	defer fmt.Println("main func semi-finish")
-	fmt.Println("hello world")
+type controller interface { // メソッドの一覧を定義する
+	speedUp() int
+	speedDown() int
 }
 
-func trimExtension(files ...string) []string { // ...string で可変長のsliceを扱える
-	out := make([]string, 0, len(files))
-	for _, f := range files {
-		out = append(out, strings.TrimSuffix(f, ".csv"))
-	}
-	return out
+type vehicle struct {
+	speed        int
+	machinePower int
 }
 
-func fileChecker(name string) (string, error) {
-	f, err := os.Open(name)
-	if err != nil {
-		return "", errors.New("file not found")
-	}
-	defer f.Close()
-	return name, nil
+type bycycle struct {
+	speed      int
+	humanPower int
 }
 
-func addExt(f func(file string) string, name string) {
-	fmt.Println(f(name))
+func (v *vehicle) speedUp() int {
+	v.speed += 10 * v.machinePower
+	return v.speed
 }
 
-func multiply() func(int) int {
-	return func(i int) int {
-		return i * 1000
-	}
+// ---
+func (v *vehicle) speedDown() int {
+	v.speed -= 5 * v.machinePower
+	return v.speed
 }
 
-func countUp() func(int) int {
-	count := 0 // global変数とは違い、値をこのスコープに閉じ込めることができる
-	return func(n int) int {
-		count += n
-		return count
-	}
+// ---
+// interfaceに書かれたすべてのメソッドを実装しているtypeは
+// 自動的に「そのinterfaceを実装している」とみなされる
+// → そのinterfaceを引数にとる関数などが使える！
+
+func (v *bycycle) speedUp() int {
+	v.speed += 5 * v.humanPower
+	return v.speed
+}
+
+func (v *bycycle) speedDown() int {
+	v.speed -= 3 * v.humanPower
+	return v.speed
+}
+
+func speedUpAndDown(c controller) {
+	fmt.Printf("current speed: %v\n", c.speedUp())
+	fmt.Printf("current speed: %v\n", c.speedDown())
+}
+
+func (v vehicle) String() string {
+	// Sprintg: フォーマットしたstringを"返す"
+	return fmt.Sprintf("vehicle current speed is %v (enginePower is %v)", v.speed, v.machinePower)
 }
 
 func main() {
-	funcDefer()
+	v := &vehicle{0, 5}
+	// メソッドを呼び出す時にpointer receiverを使っているため、&でポインタを取得する
+	speedUpAndDown(v) // 渡せる！
 
-	files := []string{"file1.csv", "file2.csv", "file3.csv"}
-	fmt.Println(trimExtension(files...))
+	b := &bycycle{0, 5}
+	speedUpAndDown(b)
 
-	name, err := fileChecker("file.txt")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(name) // $ touch file.txt
+	// Stringer interface
+	// ref. https://pkg.go.dev/golang.org/x/tools/cmd/stringer
+	// fmtで出力するとき、内部で Stringer interface を満たすかチェックし、
+	// その #String() を呼び出している
+	// ; Stringer関数を実装すればfmtで出力できる
+	fmt.Println(v)
 
-	// 無名関数
-	i := 1
-	func(i int) {
-		fmt.Println(i)
-	}(i) // 引数に与えると即座に実行してくれる
+	// any型; すべての型をとれる
+	var i1 any
+	var i2 interface{} // any型と全く一緒; 別表記 (0個のメソッドを実装する型)
+	fmt.Printf("%[1]%v, %[1]T, %v\n", i1, unsafe.Sizeof(i1))
+	fmt.Printf("%[1]%v, %[1]T, %v\n", i2, unsafe.Sizeof(i2))
+	// %v, <nil>, 16
+	checkType(i1) // nil
+	i1 = 1
+	checkType(i1) // int
+	i1 = "hello"
+	checkType(i1) // string
 
-	f1 := func(i int) int {
-		return i + 1
-	}
-	fmt.Println(f1(i))
+}
 
-	// 無名関数を引数にもつ関数
-	f2 := func(name string) string {
-		return name + ".csv"
-	}
-	addExt(f2, "file1")
+func checkType(i any) {
+	switch i.(type) {
+	case nil:
+		fmt.Println("nil")
 
-	// 無名関数を返り値にもつ関数
-	f3 := multiply()
-	fmt.Println(f3(2))
+	case int:
+		fmt.Println("int")
 
-	// closure
-	f4 := countUp()
-	for i := 1; i <= 5; i++ {
-		v := f4(2)
-		fmt.Printf("%v\n", v)
+	case string:
+		fmt.Println("string")
+	default:
+		fmt.Println("unknown")
 	}
 }
