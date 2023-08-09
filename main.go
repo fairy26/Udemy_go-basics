@@ -1,57 +1,54 @@
 package main
 
-import (
-	"fmt"
-
-	"golang.org/x/exp/constraints" // 予めtypeの塊が定義されている
-)
-
-type NewInt int
-
-type customConstraints interface {
-	~int | int16 | float32 | float64 | string
-} // ~でintをもとにした独自のtypeも含むように
-
-func add[T customConstraints](x, y T) T {
+// 関数名を右クリック→「Go: Generate Unit Tests For Function」
+// テーブルドリブンのテストが自動生成される
+func Add(x, y int) int {
 	return x + y
 }
 
-func min[T constraints.Ordered](x, y T) T {
-	if x < y {
-		return x
+func Devide(x, y int) float32 {
+	if y == 0 {
+		return 0.
 	}
-	return y
-}
-
-func sumValues[K int | string, V constraints.Float | constraints.Integer](m map[K]V) V {
-	var sum V
-	for _, v := range m {
-		sum += v
-	}
-	return sum
+	return float32(x) / float32(y)
 }
 
 func main() {
-	fmt.Printf("%v\n", add(1, 2))
-	fmt.Printf("%v\n", add(1.1, 2.1))
-	fmt.Printf("%v\n", add("file", ".txt"))
-	var i1, i2 NewInt = 3, 4
-	fmt.Printf("%v\n", add(i1, i2))
-
-	fmt.Printf("%v\n", min(i1, i2))
-
-	m1 := map[string]uint{
-		"A": 1,
-		"B": 2,
-		"C": 3,
-	}
-	m2 := map[int]float32{
-		1: 1.23,
-		2: 4.56,
-		3: 7.89,
-	}
-
-	fmt.Printf("%v\n", sumValues(m1))
-	fmt.Printf("%v\n", sumValues(m2))
-
+	// x, y := 3, 5
+	// fmt.Printf("%v, %v\n", Add(x, y), Devide(x, y))
+	// カバレッジを計算するためにコメントアウトで一旦対象外に
 }
+
+// テストを実行する
+// ```bash
+// $ go test -v .
+// === RUN   TestAdd
+// === RUN   TestAdd/1+2=3
+// --- PASS: TestAdd (0.00s)
+//     --- PASS: TestAdd/1+2=3 (0.00s)
+// PASS
+// ok      go-basics       0.272s
+// ```
+
+// カバレッジを計算する
+// ```bash
+// $ go test -v -cover -coverprofile=coverage.out .
+// === RUN   TestAdd
+// === RUN   TestAdd/1+2=3
+// === RUN   TestAdd/2+3=5
+// --- PASS: TestAdd (0.00s)
+//     --- PASS: TestAdd/1+2=3 (0.00s)
+//     --- PASS: TestAdd/2+3=5 (0.00s)
+// === RUN   TestDevide
+// === RUN   TestDevide/1/2=0.5
+// --- PASS: TestDevide (0.00s)
+//     --- PASS: TestDevide/1/2=0.5 (0.00s)
+// PASS
+//         go-basics       coverage: 75.0% of statements
+// ok      go-basics       0.122s  coverage: 75.0% of statements
+// ```
+
+// coverageを可視化する
+// ```bash
+// $ go tool cover -html=coverage.out
+// ```
